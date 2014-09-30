@@ -1,5 +1,8 @@
-var mappo = require('./lib/mappo');
-console.log(mappo.version);
+var fs = require('fs'),
+    mappo = require('../lib/mappo');
 
 var map =  new mappo.Map(500, 500);
-console.log(map.describe());
+
+map.clear(100, 13, 43);
+
+fs.createWriteStream('out.png').write(map.getPNG());
