@@ -2,6 +2,7 @@
 #define MAP_H
 
 #include <node.h>
+#include "mappo/map.h"
 
 class Map : public node::ObjectWrap {
  public:
@@ -12,8 +13,10 @@ class Map : public node::ObjectWrap {
   ~Map();
 
   static v8::Handle<v8::Value> New(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Describe(const v8::Arguments& args);
+  static v8::Handle<v8::Value> Clear(const v8::Arguments& args);
+  static v8::Handle<v8::Value> GetPNG(const v8::Arguments& args);
   static v8::Persistent<v8::Function> constructor;
+  mappo::Map map;
 };
 
 #endif

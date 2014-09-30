@@ -1,12 +1,15 @@
 #define MAPPO
 #include <node.h>
+#include <node_buffer.h>
+#include <vector>
 #include "map.h"
+#include "mappo/map.h"
 
 using namespace v8;
 
 Persistent<Function> Map::constructor;
 
-Map::Map(int widht, int height) {
+Map::Map(int width, int height): map(width, height) {
 }
 
 Map::~Map() {
@@ -18,8 +21,10 @@ void Map::Init(Handle<Object> exports) {
   tpl->SetClassName(String::NewSymbol("Map"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
   // Prototype
-  tpl->PrototypeTemplate()->Set(String::NewSymbol("describe"),
-      FunctionTemplate::New(Describe)->GetFunction());
+  tpl->PrototypeTemplate()->Set(String::NewSymbol("clear"),
+      FunctionTemplate::New(Clear)->GetFunction());
+  tpl->PrototypeTemplate()->Set(String::NewSymbol("getPNG"),
+      FunctionTemplate::New(GetPNG)->GetFunction());
   constructor = Persistent<Function>::New(tpl->GetFunction());
   exports->Set(String::NewSymbol("Map"), constructor);
 }
@@ -42,11 +47,23 @@ Handle<Value> Map::New(const Arguments& args) {
   }
 }
 
-Handle<Value> Map::Describe(const Arguments& args) {
+Handle<Value> Map::Clear(const Arguments& args) {
   HandleScope scope;
 
-  //MyObject* obj = ObjectWrap::Unwrap<MyObject>(args.This());
-  //obj->value_ += 1;
+  int red = args[0]->IntegerValue();
+  int green = args[1]->IntegerValue();
+  int blue = args[2]->IntegerValue();
 
-  return scope.Close(String::New("Hello!"));
+  Map* obj = ObjectWrap::Unwrap<Map>(args.This());
+  obj->map.clear(red, green, blue);
+  return scope.Close(Undefined());
+}
+
+Handle<Value> Map::GetPNG(const Arguments& args) {
+  HandleScope scope;
+
+  Map* obj = ObjectWrap::Unwrap<Map>(args.This());
+  std::vector<unsigned char>* png = obj->map.writePNG();
+  v8::Handle<v8::Object> buffer = node::Buffer::New(reinterpret_cast<char*>(png->data()), png->size())->handle_;
+  return scope.Close(buffer);
 }
