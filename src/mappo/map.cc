@@ -3,10 +3,24 @@
 #include <stdlib.h>
 #include <png.h>
 #include "map.h"
+#include "agg_basics.h"
+#include "agg_rendering_buffer.h"
+#include "agg_rasterizer_scanline_aa.h"
+#include "agg_rasterizer_outline.h"
+#include "agg_scanline_p.h"
+#include "agg_scanline_bin.h"
+#include "agg_renderer_scanline.h"
+#include "agg_renderer_primitives.h"
+#include "agg_path_storage.h"
+
+#define AGG_BGR24
+#include "pixel_formats.h"
 
 using namespace mappo;
 
 typedef unsigned char ui8;
+typedef agg::renderer_base<pixfmt> renderer_base;
+typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_aa;
 
 void my_png_write_data(png_structp png_ptr, png_bytep data, png_size_t length)
 {
@@ -41,6 +55,28 @@ void Map::clear(int r, int g, int b)
             pixf->copy_pixel(x, y, c);
         }
     }
+}
+
+void Map::drawPolygon()
+{
+    agg::rasterizer_scanline_aa<> m_ras;
+    agg::scanline_p8 m_sl_p8;
+
+    pixfmt pixf(*rbuf);
+    renderer_base rb(pixf);
+    renderer_aa ren_aa(rb);
+
+    agg::path_storage path;
+
+    path.move_to(100, 100);
+    path.line_to(200, 150);
+    path.line_to(100, 300);
+    path.close_polygon();
+
+    ren_aa.color(agg::rgba(0.7, 0.5, 0.1, 0.8));
+
+    m_ras.add_path(path);
+    agg::render_scanlines(m_ras, m_sl_p8, ren_aa);
 }
 
 std::vector<ui8>* Map::writePNG()

@@ -13,6 +13,7 @@ namespace mappo
             Map(int width, int height);
             ~Map();
             void clear(int r, int g, int b);
+            void drawPolygon();
             bool writePPM(const char* filename);
             std::vector<unsigned char>* writePNG();
 
