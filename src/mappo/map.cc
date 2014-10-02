@@ -3,24 +3,8 @@
 #include <stdlib.h>
 #include <png.h>
 #include "map.h"
-#include "agg_basics.h"
-#include "agg_rendering_buffer.h"
-#include "agg_rasterizer_scanline_aa.h"
-#include "agg_rasterizer_outline.h"
-#include "agg_scanline_p.h"
-#include "agg_scanline_bin.h"
-#include "agg_renderer_scanline.h"
-#include "agg_renderer_primitives.h"
-#include "agg_path_storage.h"
-
-#define AGG_BGR24
-#include "pixel_formats.h"
 
 using namespace mappo;
-
-typedef unsigned char ui8;
-typedef agg::renderer_base<pixfmt> renderer_base;
-typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_aa;
 
 void my_png_write_data(png_structp png_ptr, png_bytep data, png_size_t length)
 {
@@ -28,54 +12,54 @@ void my_png_write_data(png_structp png_ptr, png_bytep data, png_size_t length)
     p->insert(p->end(), data, data + length);
 }
 
-Map::Map(int w, int h)
+agg::path_storage get_path(std::vector<int> xcoords, std::vector<int> ycoords, bool close_polygon)
 {
-    width = w;
-    height = h;
-    buffer = new unsigned char[width * height * 3];
+    agg::path_storage path;
+    path.move_to(xcoords[0], ycoords[0]);
 
-    rbuf = new agg::rendering_buffer(buffer, width, height, width * 3);
-    pixf = new agg::pixfmt_rgb24(*rbuf);
+    int len = std::min(xcoords.size(), ycoords.size());
+    for (int i = 1; i < len; ++i) {
+        path.line_to(xcoords[i], ycoords[i]);
+    }
+
+    if (close_polygon)
+        path.close_polygon();
+
+    return path;
+}
+
+
+Map::Map(int w, int h):
+    width(w),
+    height(h),
+    buffer(width * height * 3),
+    rbuf(&buffer[0], w, h, w * 3),
+    pixf(rbuf),
+    rb(pixf)
+{
+
 }
 
 Map::~Map()
 {
-    delete pixf;
-    delete rbuf;
-    delete buffer;
 }
 
 void Map::clear(int r, int g, int b)
 {
-    agg::rgba8 c(r,g,b);
-    for (int x = 0; x < width; ++x)
-    {
-        for (int y = 0; y < height; ++y)
-        {
-            pixf->copy_pixel(x, y, c);
-        }
-    }
+    rb.clear(agg::rgba8(r, g, b));
 }
 
-void Map::drawPolygon()
+void Map::drawPolygon(std::vector<int> xcoords, std::vector<int> ycoords)
 {
     agg::rasterizer_scanline_aa<> m_ras;
     agg::scanline_p8 m_sl_p8;
 
-    pixfmt pixf(*rbuf);
-    renderer_base rb(pixf);
-    renderer_aa ren_aa(rb);
-
-    agg::path_storage path;
-
-    path.move_to(100, 100);
-    path.line_to(200, 150);
-    path.line_to(100, 300);
-    path.close_polygon();
-
-    ren_aa.color(agg::rgba(0.7, 0.5, 0.1, 0.8));
-
+    agg::path_storage path = get_path(xcoords, ycoords, true);
     m_ras.add_path(path);
+
+    renderer_aa ren_aa(rb);
+    ren_aa.color(agg::rgba8(160, 32, 240));
+
     agg::render_scanlines(m_ras, m_sl_p8, ren_aa);
 }
 
@@ -122,7 +106,7 @@ std::vector<ui8>* Map::writePNG()
         int i = 0;
         for (int y = 0; y < height; ++y)
         {
-            agg::rgba8 c = pixf->pixel(x, y);
+            agg::rgba8 c = pixf.pixel(x, y);
             row[i++] = c.r;
             row[i++] = c.g;
             row[i++] = c.b;
@@ -138,17 +122,4 @@ std::vector<ui8>* Map::writePNG()
     if (row != NULL) free(row);
 
     return state;
-}
-
-bool Map::writePPM(const char* filename)
-{
-    FILE* fd = fopen(filename, "wb");
-    if(fd)
-    {
-        fprintf(fd, "P6 %d %d 255 ", width, height);
-        fwrite(buffer, 1, width * height * 3, fd);
-        fclose(fd);
-        return true;
-    }
-    return false;
 }

@@ -65,24 +65,21 @@ Handle<Value> Map::Clear(const Arguments& args) {
 Handle<Value> Map::DrawPolygon(const Arguments& args) {
   HandleScope scope;
 
-  Local<Array> a = Array::Cast(*args[0]);
+  Local<Array> xarray = Local<Array>::Cast(args[0]);
+  Local<Array> yarray = Local<Array>::Cast(args[1]);
 
-  for (int i = 0, n = a->Length(); i < n; ++i) {
-    int e = (int) a->Get(Integer::New(i))->ToInteger();
-    std::cout << 1;
+  int len = std::min(xarray->Length(), yarray->Length());
+
+  std::vector<int> xcoords(len);
+  std::vector<int> ycoords(len);
+
+  for (int i = 0; i < len; ++i) {
+    xcoords[i] = xarray->Get(i)->ToInt32()->Value();
+    ycoords[i] = yarray->Get(i)->ToInt32()->Value();
   }
 
-  /*
-  Local<Object>  array  = args[0]->ToObject();
-  Handle<Object> buffer = array->Get(String::New("buffer"))->ToObject();
-  unsigned int   offset = array->Get(String::New("byteOffset"))->Uint32Value();
-  //int            length = array->Get(String::New("byteLength"))->Uint32Value();
-
-  char* ptr = (char*) &((char*) buffer->GetIndexedPropertiesExternalArrayData())[offset];
-  */
-
   Map* obj = ObjectWrap::Unwrap<Map>(args.This());
-  obj->map.drawPolygon();
+  obj->map.drawPolygon(xcoords, ycoords);
   return scope.Close(Undefined());
 }
 
